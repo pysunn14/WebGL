@@ -225,6 +225,7 @@ function render() {
 }
 
 // Animation and Interaction
+
 const buttonClick = document.getElementById("button").onclick = (event) => {
     isRotating = !isRotating;
 
@@ -248,9 +249,7 @@ const colorSelect = document.getElementById("Color").onchange = (event) => {
     }
 };
 
-let move = {
-    X: 0.0, Y:0.0
-}
+let move = { X: 0.0, Y: 0.0 }
 
 function updateVertices(){
 
