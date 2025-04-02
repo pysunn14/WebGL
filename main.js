@@ -7,6 +7,7 @@ Software 202126885 Kim Minseok
 let gl;
 let buffer;
 let currentColor = [1.0, 0.0, 0.0, 1.0]; // red
+let randomColor = false;
 
 const vertexShaderSource = `
 
@@ -210,6 +211,10 @@ function render() {
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     // Color
+    if(randomColor) {
+        currentColor = [Math.random(), Math.random(), Math.random(), 1.0];
+    }
+
     gl.uniform4fv(colorLocation, currentColor);
 
     // Rotation
@@ -226,18 +231,23 @@ function render() {
 
 // Animation and Interaction
 
-const buttonClick = document.getElementById("button").onclick = (event) => {
+const buttonClick = (event) => {
     isRotating = !isRotating;
 
     if(!isRotating) theta = 0.0;
 };
 
-const sliderChange = document.getElementById("slider").onchange = (event) => {
-    alpha = event.target.value * 0.001;
+document.getElementById("button").onclick = buttonClick;
+
+const sliderChange = (event) => {
+    alpha = event.target.value * 0.005;
 };
 
-const colorSelect = document.getElementById("Color").onchange = (event) => {
+document.getElementById("slider").onchange = sliderChange;
+
+const colorSelect = (event) => {
     const selected = event.target.value;
+    randomColor = false;
 
     console.log("select :  " ,selected);
     if(selected === "red") {
@@ -246,10 +256,16 @@ const colorSelect = document.getElementById("Color").onchange = (event) => {
         currentColor = [0.0, 1.0, 0.0, 1.0];
     } else if (selected === "blue") {
         currentColor = [0.0, 0.0, 1.0, 1.0];
+    } else if (selected === "random") {
+        randomColor = true;
     }
 };
 
-let move = { X: 0.0, Y: 0.0 }
+document.getElementById("Color").onchange = colorSelect;
+
+let move = {
+    X: 0.0, Y:0.0
+}
 
 function updateVertices(){
 
