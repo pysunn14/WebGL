@@ -101,7 +101,7 @@ const verticesM = new Float32Array([
     x + 0.35, y + 0.5,
     x + 0.4, y + 0.5,
     x + 0.35, y,
-])
+]);
 
 x = 0.5;
 y = 0.0;
@@ -132,13 +132,20 @@ const verticesS = new Float32Array([
     x + 0.3, y + 0.05,
     x + 0.3, y,
     x, y,
-])
+]);
 
 const vertices = new Float32Array([
     ...verticesK,
     ...verticesM,
-    ...verticesS
-])
+    ...verticesS,
+
+    // line
+    -0.5, -0.1,
+    0.8, -0.1,
+
+    -0.5, 0.6,
+    0.8, 0.6,
+]);
 
 const offset =  {
     K : {start: 0, count: verticesK.length / 2},
@@ -221,16 +228,16 @@ function render() {
     if(isRotating) theta += alpha;
     gl.uniform1f(thetaLocation, theta);
 
-    gl.drawArrays(gl.TRIANGLES, offset.K.start,offset.K.count);
+    gl.drawArrays(gl.TRIANGLES, offset.K.start, offset.K.count);
     gl.drawArrays(gl.TRIANGLES, offset.M.start, offset.M.count);
     gl.drawArrays(gl.TRIANGLES, offset.S.start, offset.S.count);
+    gl.drawArrays(gl.LINES, offset.S.start + offset.S.count, 4);
 
     // loop
     requestAnimationFrame(render);
 }
 
 // Animation and Interaction
-
 const buttonClick = (event) => {
     isRotating = !isRotating;
 
