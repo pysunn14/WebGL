@@ -9,21 +9,39 @@ let buffer;
 let currentColor = [1.0, 0.0, 0.0, 1.0]; // red
 let randomColor = false;
 
+// 회전할 중심이 될 고정점
+let move = {
+    X: 0.0, Y:0.0
+}
+
+let pos = {
+    X: 0.2, Y: 0.0
+}
+
 const vertexShaderSource = `
 
-    attribute vec2 a_position; // 정점 좌표
-    uniform float theta;    // 회전 각도
-     
-    void main() { 
+    attribute vec2 a_position;
+    uniform vec2 point;
+    uniform float theta;
+
+    void main() {
+    
+        gl_PointSize = 30.0;
+        
+        vec2 translated = a_position - point;
+
         float cosTheta = cos(theta);
         float sinTheta = sin(theta);
-        
+
         vec2 rotatePosition = vec2(
-            cosTheta * a_position.x - sinTheta * a_position.y  , 
-            sinTheta * a_position.x + cosTheta * a_position.y 
-        ); 
-        gl_Position = vec4(rotatePosition, 0.0, 1.0);     
-    } 
+            cosTheta * translated.x - sinTheta * translated.y,
+            sinTheta * translated.x + cosTheta * translated.y
+        );
+
+        vec2 final = rotatePosition + point;
+
+        gl_Position = vec4(final, 0.0, 1.0);
+    }
 `;
 
 const fragmentShaderSource = `
@@ -134,17 +152,93 @@ const verticesS = new Float32Array([
     x, y,
 ]);
 
+x = -0.5;
+y = 0.0;
+
+const verticesK_Line = new Float32Array([
+
+    x, y,
+    x, y + 0.5,
+
+    x + 0.04, y,
+    x + 0.04, y + 0.5,
+
+    x, y + 0.25,
+    x + 0.35, y + 0.5,
+    x+0.04, y + 0.25,
+    x + 0.39, y + 0.5,
+
+    x, y + 0.25,
+    x + 0.35, y,
+
+    x + 0.04, y + 0.25,
+    x + 0.39, y,
+
+]);
+
+x = 0.0;
+y = 0.0;
+const verticesM_line = new Float32Array([
+    x, y,
+    x, y + 0.5,
+
+    x + 0.04, y,
+    x + 0.04, y + 0.5,
+
+    x + 0.4, y,
+    x + 0.4, y + 0.5,
+    x + 0.44, y,
+    x + 0.44, y + 0.5,
+
+    x, y + 0.5,
+    x + 0.2, y,
+    x + 0.04, y + 0.5,
+    x + 0.04 + 0.2, y,
+
+    x + 0.2, y,
+    x + 0.4, y + 0.5,
+    x + 0.24, y,
+    x + 0.44, y + 0.5,
+
+]);
+
+x = 0.5;
+y = 0.0;
+
+const verticesS_line = new Float32Array([
+    x, y + 0.5,
+    x + 0.3, y + 0.5,
+
+    x + 0.3, y + 0.5,
+    x + 0.3, y + 0.45,
+
+    x + 0.3, y + 0.45,
+    x, y + 0.45,
+
+    x, y + 0.05,
+    x + 0.3, y + 0.05,
+
+    x + 0.3, y + 0.05,
+    x + 0.3, y,
+
+    x, y + 0.50,
+    x + 0.3, y + 0.05,
+
+    x, y + 0.40,
+    x + 0.3, y,
+
+    x + 0.3, y,
+    x, y,
+]);
+
 const vertices = new Float32Array([
     ...verticesK,
     ...verticesM,
     ...verticesS,
 
-    // line
-    -0.5, -0.1,
-    0.8, -0.1,
-
-    -0.5, 0.6,
-    0.8, 0.6,
+    ...verticesK_Line,
+    ...verticesM_line,
+    ...verticesS_line,
 ]);
 
 const offset =  {
@@ -153,7 +247,7 @@ const offset =  {
     S : {start: verticesM.length / 2 + verticesK.length / 2, count: verticesS.length / 2},
 }
 
-let colorLocation, thetaLocation;
+let colorLocation, thetaLocation, fixedPointLocation;
 
 window.onload = function init() {
 
@@ -177,16 +271,26 @@ window.onload = function init() {
     gl.compileShader(vertexShader);
     gl.compileShader(fragmentShader);
 
+    if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+        console.error("Vertex Shader compile error:", gl.getShaderInfoLog(vertexShader));
+    }
+
+    if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+        console.error("Fragment Shader compile error:", gl.getShaderInfoLog(fragmentShader));
+    }
+
     // Shader 합치기
     const program = gl.createProgram();
+
     gl.attachShader(program, vertexShader); // link program <-> vertexShader
+
     gl.attachShader(program, fragmentShader); // link program <-> fragmentShader
     gl.linkProgram(program);
     gl.useProgram(program);
 
-    // color
-    colorLocation = gl.getUniformLocation(program, "u_color");
-    thetaLocation = gl.getUniformLocation(program, "theta");
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error("Program link error:", gl.getProgramInfoLog(program));
+    }
 
     // 메모리 영역 - Buffer 생성
     buffer = gl.createBuffer();
@@ -195,6 +299,11 @@ window.onload = function init() {
 
     // 위치 계산
     const position = gl.getAttribLocation( program, "a_position" );
+
+    // Location
+    colorLocation = gl.getUniformLocation(program, "u_color");
+    thetaLocation = gl.getUniformLocation(program, "theta");
+    fixedPointLocation = gl.getUniformLocation(program, "point");
 
     gl.enableVertexAttribArray( position );
     gl.vertexAttribPointer(
@@ -206,21 +315,21 @@ window.onload = function init() {
         0 // offset
     );
 
+    gl.uniform2f(fixedPointLocation, pos.X, pos.Y);
     render();
 }
 
 let isRotating = false;
 let alpha = 0.05;
-
 let theta = 0.0; // 회전 각도
+let isTriangle = false;
+
 function render() {
 
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     // Color
-    if(randomColor) {
-        currentColor = [Math.random(), Math.random(), Math.random(), 1.0];
-    }
+    if(randomColor) currentColor = [Math.random(), Math.random(), Math.random(), 1.0];
 
     gl.uniform4fv(colorLocation, currentColor);
 
@@ -228,10 +337,22 @@ function render() {
     if(isRotating) theta += alpha;
     gl.uniform1f(thetaLocation, theta);
 
-    gl.drawArrays(gl.TRIANGLES, offset.K.start, offset.K.count);
-    gl.drawArrays(gl.TRIANGLES, offset.M.start, offset.M.count);
-    gl.drawArrays(gl.TRIANGLES, offset.S.start, offset.S.count);
-    gl.drawArrays(gl.LINES, offset.S.start + offset.S.count, 4);
+    // Draw
+
+    if(isTriangle){
+        // Triangles
+        gl.drawArrays(gl.TRIANGLES, offset.K.start, offset.K.count);
+        gl.drawArrays(gl.TRIANGLES, offset.M.start, offset.M.count);
+        gl.drawArrays(gl.TRIANGLES, offset.S.start, offset.S.count);
+    }
+
+    else {
+        // Lines
+        gl.drawArrays(gl.LINES, offset.S.start + offset.S.count, (verticesK_Line.length + verticesM_line.length + verticesS_line.length)/2);
+
+        // Points
+        gl.drawArrays(gl.POINTS, offset.S.start + offset.S.count,(verticesK_Line.length + verticesM_line.length + verticesS_line.length)/2);
+    }
 
     // loop
     requestAnimationFrame(render);
@@ -252,6 +373,13 @@ const sliderChange = (event) => {
 
 document.getElementById("slider").onchange = sliderChange;
 
+const styleSelect = (event) => {
+    const selected = event.target.value;
+    isTriangle = selected !== "line";
+};
+
+document.getElementById("style").onchange = styleSelect;
+
 const colorSelect = (event) => {
     const selected = event.target.value;
     randomColor = false;
@@ -270,11 +398,12 @@ const colorSelect = (event) => {
 
 document.getElementById("Color").onchange = colorSelect;
 
-let move = {
-    X: 0.0, Y:0.0
-}
-
 function updateVertices(){
+
+    pos.X += move.X;
+    pos.Y += move.Y;
+
+    gl.uniform2f(fixedPointLocation, pos.X, pos.Y);
 
     for(let i = 0 ; i + 1 < vertices.length ; i += 2){
         vertices[i] += move.X; // pos x
@@ -307,7 +436,9 @@ window.addEventListener("keydown", function(event) {
             move.Y = -moveSpeed;
             break;
     }
+
     updateVertices();
 });
+
 
 
